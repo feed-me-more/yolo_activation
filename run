@@ -1,0 +1,9 @@
+# Start with MobileNetV2
+python main.py run --model mobilenet_v2 --num-packets 16 \
+  --corpus-size 5000 --query-size 256 \
+  --loss-rates 0.0,0.2,0.4,0.6 \
+  --hf-token $HF_TOKEN
+
+# YOLO streaming (two terminals)
+python main.py stream-recv --udp-port 9999
+python main.py stream-send --source 0 --udp-loss 0.1

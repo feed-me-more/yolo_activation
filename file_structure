@@ -1,0 +1,25 @@
+split_inference/
+├── main.py                   ← single entrypoint for everything
+├── config.py                 ← all settings, argparser
+├── requirements.txt
+├── models/
+│   ├── __init__.py           ← load_model() factory
+│   ├── base.py               ← SplitModel ABC + ModelDimensions
+│   ├── mobilenet.py          ← split after features[14]
+│   ├── vit.py                ← split after block 9/12
+│   └── yolo.py               ← split at backbone end
+├── corpus/
+│   ├── build.py              ← raw corpus (no transforms)
+│   └── transform.py          ← 4 combinations of bitmask/randperm
+├── alignment/
+│   ├── faiss_index.py        ← Stage 1 aggregation scoring
+│   └── hungarian.py          ← Stage 2 bipartite matching
+├── experiments/
+│   ├── alignment_test.py     ← position recovery metrics + plots
+│   └── inference_test.py     ← 5-condition accuracy + plots
+├── streaming/
+│   ├── sender.py             ← UDP encoder + transmitter
+│   └── receiver.py           ← UDP aligner + decoder
+└── utils/
+    ├── packet.py             ← PacketTransform, loss simulation
+    └── plotting.py           ← all bar/line plots
