@@ -23,7 +23,7 @@ class Config:
     model_name: str = "mobilenet_v2"  # mobilenet_v2 | vit_b16 | yolo
 
     # ── chunking ──────────────────────────────
-    num_packets: int = 16             # P  (configurable directly)
+    num_packets: int = 32             # P  (configurable directly)
     mtu_bytes: int = 1024             # printed in summary; does NOT drive P
 
     # ── corpus ────────────────────────────────
@@ -97,40 +97,44 @@ class Config:
 def make_parser(description: str):
     import argparse
 
+    d=Config()
+
+    default_loss_str = ",".join(str(x) for x in d.loss_rates)
+
     p = argparse.ArgumentParser(description=description)
-    p.add_argument("--model",        default="mobilenet_v2",
+    p.add_argument("--model",        default=d.model_name,
                    choices=["mobilenet_v2", "vit_b16", "yolo"],
                    help="Which split model to use")
-    p.add_argument("--out-dir",      default="outputs",
+    p.add_argument("--out-dir",      default=d.out_dir,
                    help="Root output directory")
-    p.add_argument("--num-packets",  type=int,   default=16,
+    p.add_argument("--num-packets",  type=int,   default=d.num_packets,
                    help="Number of packets P to split activation into")
-    p.add_argument("--corpus-size",  type=int,   default=5000)
-    p.add_argument("--query-size",   type=int,   default=256)
-    p.add_argument("--loss-rates",   default="0.0,0.2,0.4",
+    p.add_argument("--corpus-size",  type=int,   default=d.corpus_size)
+    p.add_argument("--query-size",   type=int,   default=d.query_size)
+    p.add_argument("--loss-rates",   default=default_loss_str,
                    help="Comma-separated packet loss rates, e.g. 0.0,0.2,0.4,0.6")
-    p.add_argument("--bitmask",      action="store_true",  default=True)
+    p.add_argument("--bitmask",      action="store_true",  default=d.use_bitmask)
     p.add_argument("--no-bitmask",   dest="bitmask", action="store_false")
-    p.add_argument("--randperm",     action="store_true",  default=True)
+    p.add_argument("--randperm",     action="store_true",  default=d.use_randperm)
     p.add_argument("--no-randperm",  dest="randperm", action="store_false")
-    p.add_argument("--seed",         type=int,   default=42)
-    p.add_argument("--batch-size",   type=int,   default=32)
-    p.add_argument("--device",       default="auto")
-    p.add_argument("--hf-token",     default="",
+    p.add_argument("--seed",         type=int,   default=d.seed)
+    p.add_argument("--batch-size",   type=int,   default=d.batch_size)
+    p.add_argument("--device",       default=d.device)
+    p.add_argument("--hf-token",     default=d.hf_token,
                    help="HuggingFace token (or set HF_TOKEN env var)")
     # UDP / streaming args
-    p.add_argument("--udp-host",     default="127.0.0.1")
-    p.add_argument("--udp-port",     type=int,   default=9999)
-    p.add_argument("--udp-loss",     type=float, default=0.0)
-    p.add_argument("--source",       default="0",
+    p.add_argument("--udp-host",     default=d.udp_host)
+    p.add_argument("--udp-port",     type=int,   default=d.udp_port)
+    p.add_argument("--udp-loss",     type=float, default=d.udp_loss_rate)
+    p.add_argument("--source",       default=d.video_source,
                    help="Video source: '0' for webcam or path to video file")
-    p.add_argument("--frame-timeout-ms", type=int, default=120,
+    p.add_argument("--frame-timeout-ms", type=int, default=d.frame_timeout_ms,
                    help="Receiver frame assembly timeout in milliseconds")
-    p.add_argument("--max-frames",   type=int, default=0,
+    p.add_argument("--max-frames",   type=int, default=d.max_frames,
                    help="Process at most this many frames in streaming mode; 0 means unlimited")
-    p.add_argument("--save-video",   action="store_true", default=False,
+    p.add_argument("--save-video",   action="store_true", default=d.stream_save_video,
                    help="Save annotated sender video to disk")
-    p.add_argument("--no-show",      dest="show", action="store_false", default=True,
+    p.add_argument("--no-show",      dest="show", action="store_false", default=d.stream_show,
                    help="Disable OpenCV display windows")
     return p
 

@@ -68,6 +68,7 @@ def main():
 
     args = top.parse_args()
     cfg  = config_from_args(args)
+    # cfg = Config()
 
     _banner()
     _print_config(cfg)
