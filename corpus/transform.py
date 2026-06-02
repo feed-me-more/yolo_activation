@@ -39,7 +39,8 @@ def apply_transform(
     model_dir  = Path(out_dir) / model_name
     raw_path   = model_dir / "corpus_raw.npy"
 
-    tag         = f"bm{int(use_bitmask)}_rp{int(use_randperm)}"
+    # tag         = f"bm{int(use_bitmask)}_rp{int(use_randperm)}"
+    tag         = f"P{num_packets}_s{seed}_bm{int(use_bitmask)}_rp{int(use_randperm)}"
     tf_path     = model_dir / f"transform_{tag}.npz"
     corpus_path = model_dir / f"corpus_{tag}.npy"
 
@@ -54,8 +55,16 @@ def apply_transform(
 
     # ── Load or create transform ───────────────
     if tf_path.exists() and not force_rebuild:
-        print(f"  [transform] Loading cached transform from {tf_path}")
+        # print(f"  [transform] Loading cached transform from {tf_path}")
         transform = PacketTransform.load(tf_path)
+
+        if transform.P != num_packets:
+        raise RuntimeError(
+            f"Cached transform at {tf_path} has P={transform.P}, "
+            f"but current run requested P={num_packets}. "
+            f"Delete the cache or change --num-packets."
+        )
+
     else:
         print(f"  [transform] Building transform  bitmask={use_bitmask}  randperm={use_randperm}")
         transform = PacketTransform(

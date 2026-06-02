@@ -96,6 +96,9 @@ class FaissCorpusIndex:
         q = F.normalize(q, dim=1)
 
         # Exact similarities: (n_recv, M*P)
+
+        print(f"  [align] Retrieval: q={q.shape}  corpus={self._corpus_flat_gpu.shape}")
+
         sim = q @ self._corpus_flat_gpu.T
         sim_3d = sim.view(q.shape[0], self.M, self.P)
         agg_scores = sim_3d.amax(dim=2).sum(dim=0)

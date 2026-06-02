@@ -20,7 +20,7 @@ class Config:
     out_dir: str = "outputs"          # root for all saved files
 
     # ── model ─────────────────────────────────
-    model_name: str = "mobilenet_v2"  # mobilenet_v2 | vit_b16 | yolo
+    model_name: str = "yolo"  # mobilenet_v2 | vit_b16 | yolo
 
     # ── chunking ──────────────────────────────
     num_packets: int = 32             # P  (configurable directly)
@@ -43,7 +43,7 @@ class Config:
 
     # ── misc ──────────────────────────────────
     seed: int = 42
-    batch_size: int = 32
+    batch_size: int = 64
     num_workers: int = 0
     device: str = "auto"              # auto | cpu | cuda
 
@@ -60,7 +60,7 @@ class Config:
     udp_host: str = "192.168.0.157"   # Receiver's IP address (laptop)
     udp_port: int = 5006              # Receiver's PORT
     udp_loss_rate: float = 0.0        # simulated loss on sender side
-    video_source: str = "0"           # "0" = webcam, or path to video file
+    video_source: str = "road_traffic.mp4"           # "0" = webcam, or path to video file
     frame_timeout_ms: int = 120
     max_frames: int = 0
     stream_show: bool = True
@@ -82,12 +82,16 @@ class Config:
         return self.model_out_dir() / "corpus_labels.npy"
 
     def transform_path(self) -> Path:
-        tag = f"bm{int(self.use_bitmask)}_rp{int(self.use_randperm)}"
+        tag = f"P{self.num_packets}_s{self.seed}_bm{int(self.use_bitmask)}_rp{int(self.use_randperm)}"
         return self.model_out_dir() / f"transform_{tag}.npz"
+        # tag = f"bm{int(self.use_bitmask)}_rp{int(self.use_randperm)}"
+        # return self.model_out_dir() / f"transform_{tag}.npz"
 
     def transformed_corpus_path(self) -> Path:
-        tag = f"bm{int(self.use_bitmask)}_rp{int(self.use_randperm)}"
+        tag = f"P{self.num_packets}_s{self.seed}_bm{int(self.use_bitmask)}_rp{int(self.use_randperm)}"
         return self.model_out_dir() / f"corpus_{tag}.npy"
+        # tag = f"bm{int(self.use_bitmask)}_rp{int(self.use_randperm)}"
+        # return self.model_out_dir() / f"corpus_{tag}.npy"
 
 
 # ─────────────────────────────────────────────
