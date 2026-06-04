@@ -91,7 +91,7 @@ def run_receiver(
     sock_rx.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8 * 1024 * 1024)
     print(f"  Binding to {host}:{port}...")
     sock_rx.bind((host, port))
-    sock_rx.settimeout(0.1)
+    sock_rx.settimeout(0.5)
 
     sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -100,11 +100,12 @@ def run_receiver(
 
     print(f"  {'frame':>7}  {'recv':>9}  {'align_ms':>9}  {'decode_ms':>9}  {'total_ms':>9}  {'loss%':>7}")
     print(f"  {'─'*66}")
-    print("  Receiver ready. Start the sender now.\n")
+    # print("  Receiver ready. Start the sender now.\n")
 
     while True:
         try:
             data, sender_addr = sock_rx.recvfrom(65535)
+            print(f"Received packet from {sender_addr[0]}:{sender_addr[1]} with {len(data)} bytes")
         except socket.timeout:
             _flush_stale(
                 buf=buf,
@@ -125,6 +126,9 @@ def run_receiver(
 
         frame_id = struct.unpack(HEADER_FMT, data[:HEADER_SIZE])[0]
         payload = np.frombuffer(data[HEADER_SIZE:], dtype=np.float16).astype(np.float32, copy=False)
+        
+        with open("payload.txt", "a") as f:
+            f.write(f"Frame ID: {frame_id}, Payload Shape: {payload.shape}\n")
 
         entry = buf[frame_id]
         if entry["t_first"] is None:
@@ -213,6 +217,7 @@ def _process_frame(
             "detections": detections[:50].tolist(),
             "class_names": {int(k): v for k, v in model._model.names.items()},
         }
+        print(f"  Sending result back to sender at {sender_addr[0]}:{DEST_PORT}...")
         sock_tx.sendto(json.dumps(result).encode("utf-8"), (sender_addr[0], DEST_PORT))
 
 

@@ -99,6 +99,10 @@ def run_sender(
     sock.bind(("", LOCAL_SEND_PORT))
     sock.settimeout(max(1.0, frame_timeout_ms / 1000.0 * 8.0))
 
+    sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock_rx.bind(("", LOCAL_RECV_PORT))
+    sock_rx.settimeout(0.1)
+
     cap = cv2.VideoCapture(int(source) if source.isdigit() else source)
     if not cap.isOpened():
         raise RuntimeError(f"Could not open source: {source}")
@@ -158,31 +162,32 @@ def run_sender(
             if effective_loss > 0 and rng.random() < effective_loss:
                 continue
             payload = packets_raw[idx].astype(np.float16, copy=False).tobytes()
-            header = struct.pack(HEADER_FMT, frame_id)
-            print(f"Sending packet {idx+1}/{num_packets} for frame {frame_id} (payload {len(payload)} bytes) to {host}:{port}")
+            header = struct.pack(HEADER_FMT, frame_id*10+idx)
             sock.sendto(header + payload, (host, port))
             n_sent += 1
             if is_local_demo:
                 print("Local demo, so sleep")
                 time.sleep(0.0002)
+
+        print(f"Sent for frame {frame_id} (payload {len(payload)} bytes) to {host}:{port}")
+
         tx_ms = (time.perf_counter() - t_tx) * 1e3
         wait_start = time.perf_counter()
 
         result = None
         while True:
             try:
-                data, _ = sock.recvfrom(65535)
-                print(f"Received response for frame {frame_id} ({len(data)} bytes)")
+                data, _ = sock_rx.recvfrom(65535)
             except socket.timeout:
-                print(f"  Timeout waiting for response for frame {frame_id} after {frame_timeout_ms} ms.")
+                print(f"Timeout waiting for response for frame {frame_id} after {frame_timeout_ms} ms.")
                 break
 
             try:
                 msg = json.loads(data.decode("utf-8"))
-                print(f"  Received message: {msg}")
             except Exception:
                 continue
-            if int(msg.get("frame_id", -1)) != frame_id:
+            if int(msg.get("frame_id", -1)) != frame_id*10+idx:
+                print(f"Received response for frame {msg.get('frame_id')*10+idx} while waiting for frame {frame_id*10+idx}, ignoring.")
                 continue
             result = msg
             break
