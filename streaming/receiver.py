@@ -76,7 +76,7 @@ def run_receiver(
         hf_token="",
         seed=seed,
     )
-    transform, corpus_transformed = apply_transform(
+    _, corpus_transformed = apply_transform(
         model_name="yolo",
         num_packets=num_packets,
         out_dir=out_dir,
@@ -89,6 +89,7 @@ def run_receiver(
     # Receiving socket
     sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock_rx.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8 * 1024 * 1024)
+    print(f"  Binding to {host}:{port}...")
     sock_rx.bind((host, port))
     sock_rx.settimeout(0.1)
 

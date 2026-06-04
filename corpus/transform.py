@@ -59,11 +59,11 @@ def apply_transform(
         transform = PacketTransform.load(tf_path)
 
         if transform.P != num_packets:
-        raise RuntimeError(
-            f"Cached transform at {tf_path} has P={transform.P}, "
-            f"but current run requested P={num_packets}. "
-            f"Delete the cache or change --num-packets."
-        )
+            raise RuntimeError(
+                f"Cached transform at {tf_path} has P={transform.P}, "
+                f"but current run requested P={num_packets}. "
+                f"Delete the cache or change --num-packets."
+            )
 
     else:
         print(f"  [transform] Building transform  bitmask={use_bitmask}  randperm={use_randperm}")

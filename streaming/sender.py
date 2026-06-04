@@ -159,9 +159,11 @@ def run_sender(
                 continue
             payload = packets_raw[idx].astype(np.float16, copy=False).tobytes()
             header = struct.pack(HEADER_FMT, frame_id)
+            print(f"Sending packet {idx+1}/{num_packets} for frame {frame_id} (payload {len(payload)} bytes) to {host}:{port}")
             sock.sendto(header + payload, (host, port))
             n_sent += 1
             if is_local_demo:
+                print("Local demo, so sleep")
                 time.sleep(0.0002)
         tx_ms = (time.perf_counter() - t_tx) * 1e3
         wait_start = time.perf_counter()
@@ -170,11 +172,14 @@ def run_sender(
         while True:
             try:
                 data, _ = sock.recvfrom(65535)
+                print(f"Received response for frame {frame_id} ({len(data)} bytes)")
             except socket.timeout:
+                print(f"  Timeout waiting for response for frame {frame_id} after {frame_timeout_ms} ms.")
                 break
 
             try:
                 msg = json.loads(data.decode("utf-8"))
+                print(f"  Received message: {msg}")
             except Exception:
                 continue
             if int(msg.get("frame_id", -1)) != frame_id:
