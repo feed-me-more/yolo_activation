@@ -1,0 +1,12 @@
+Chrony Commands:
+
+(Force sync)
+sudo chronyc makestep
+
+(Restart chrony)
+sudo systemctl stop chrony
+sudo rm -f /var/lib/chrony/*
+sudo systemctl start chrony
+
+(Check status)
+chronyc sources -v
