@@ -132,7 +132,7 @@ def run_sender_noperm(
             str(out_path),
             cv2.VideoWriter_fourcc(*"mp4v"),
             fps,
-            (640, 360),
+            (1280, 720),
         )
         print(f"  [sender] Saving annotated video to {out_path}")
 
@@ -170,7 +170,7 @@ def run_sender_noperm(
 
         display_frame = cv2.resize(frame, (640, 640))
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        tensor = preprocess(rgb)                        # Converts RGB -> PIL -> Tensor (C,H,W) in [0,1] (normalizes float tensor)
+        tensor = preprocess(rgb)        # Converts RGB -> PIL -> Tensor (C,H,W) in [0,1] (normalizes float tensor)
 
         t0 = time.perf_counter()
         act = model.encoder(tensor.unsqueeze(0))        # Encodes the preprocessed image into split activations, flattens all feature maps into a single vector of shape (1, d)
@@ -241,7 +241,7 @@ def run_sender_noperm(
         if result is None:
             timeout_total += 1
             annotated = display_frame.copy()
-            annotated = cv2.resize(annotated, (640, 360))
+            annotated = cv2.resize(annotated, (1280, 720))
             cv2.putText(
                 annotated,
                 f"frame {frame_id} | timeout | sent {n_sent}/{num_packets}",
@@ -329,7 +329,7 @@ def run_sender_noperm(
     for frame_id, dets in detections_by_frame.items():
         ref_detections_by_frame = reference_dets.get(frame_id, np.zeros((0, 6), dtype=np.float32))
         metrics = compare_detections(dets, ref_detections_by_frame)
-        print(f"Frame {frame_id + 1}: {metrics}")
+#         print(f"Frame {frame_id + 1}: {metrics}")
         result_metric.append({"frame_id": frame_id, **metrics})
 
     average_metrics = average(result_metric)
@@ -346,8 +346,8 @@ def run_sender_noperm(
     print(f"  Avg process frame      : {avg_process_frame:.2f} ms")
     print(f"  Avg end-to-end         : {avg_e2e:.2f} ms  (successful frames)")
     print(f"  Total time             : {total_time:.2f}")
-    if out_path is not None:
-        print(f"  Saved video      : {out_path}")
+#     if out_path is not None:
+#         print(f"  Saved video      : {out_path}")
     print(f"Average metrics over {len(result_metric)} frames: {average_metrics}")
     print(f"{'─'*72}")
 
@@ -377,5 +377,5 @@ def _draw_detections(frame: np.ndarray, detections, class_names) -> np.ndarray:
             (0, 255, 0),
             2,
         )
-    frame = cv2.resize(frame, (640, 360))
+    frame = cv2.resize(frame, (1280, 720))
     return frame, recv_detections
