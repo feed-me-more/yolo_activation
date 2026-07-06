@@ -4,13 +4,14 @@ import numpy as np
 import struct
 import cv2
 import os
+import hashlib
 
 
 def send_packet(sock_tx, sock_rx, dest_addr, dest_port, frame_id, payload):
     # Split the payload into chunks that fit within the UDP payload size limit
     
     CHUNK_SIZE = 57600
-    DATA_HEADER_FMT = "!I d"
+    DATA_HEADER_FMT = "!I I d"
     ACK_HEADER_FMT = "!I"
     ACK_HEADER_SIZE = struct.calcsize(ACK_HEADER_FMT)
     num_chunks = (len(payload) + CHUNK_SIZE - 1) // CHUNK_SIZE
@@ -26,14 +27,14 @@ def send_packet(sock_tx, sock_rx, dest_addr, dest_port, frame_id, payload):
         chunk = payload[start:end]
 
         # Send the packet with header and chunk
-        packet = struct.pack(DATA_HEADER_FMT, idx, time.time()) + chunk
+        packet = struct.pack(DATA_HEADER_FMT, idx, frame_id, time.time()) + chunk
         sock_tx.sendto(b"D" + packet, (dest_addr, dest_port))
         data_sent += len(packet) + 1
     
     send_duration = time.perf_counter() - send_start_time
     peak_rate = max((data_sent / send_duration) / (1024 * 1024), peak_rate)
 
-    # print(f"Data sent for frame {frame_id}: {data_sent} bytes in {(send_duration * 1000):.3f} ms at {data_sent / send_duration / (1024 * 1024):.2f} Mbps")
+#     print(f"Data sent for frame {frame_id}: {data_sent} bytes in {(send_duration * 1000):.3f} ms at {data_sent / send_duration / (1024 * 1024):.2f} MBps")
 
     while True:
         try:
@@ -56,7 +57,7 @@ def send_packet(sock_tx, sock_rx, dest_addr, dest_port, frame_id, payload):
                         start = idx * CHUNK_SIZE
                         end = start + CHUNK_SIZE
                         chunk = payload[start:end]
-                        packet = struct.pack(DATA_HEADER_FMT, idx, time.time()) + chunk
+                        packet = struct.pack(DATA_HEADER_FMT, idx, frame_id, time.time()) + chunk
                         sock_tx.sendto(b"D" + packet, (dest_addr, dest_port))
                         retr_sent += len(packet) + 1                    
                     continue
@@ -67,7 +68,7 @@ def send_packet(sock_tx, sock_rx, dest_addr, dest_port, frame_id, payload):
                 start = idx * CHUNK_SIZE
                 end = start + CHUNK_SIZE
                 chunk = payload[start:end]
-                packet = struct.pack(DATA_HEADER_FMT, idx, time.time()) + chunk
+                packet = struct.pack(DATA_HEADER_FMT, idx, frame_id, time.time()) + chunk
                 sock_tx.sendto(b"D" + packet, (dest_addr, dest_port))
                 retr_sent += len(packet) + 1
             print("Sent all frames again")
@@ -87,10 +88,11 @@ LOCAL_SEND_PORT = 5006        # Sending PORT
 DEST_PORT = 5006			  # Receiver's PORT
 dest_addr = "10.51.25.143"   # Receiver's IP address (laptop)
 
-source = "road_traffic.mp4"  # Video source (file path)
+source = "720p_traffic.mp4"  # Video source (file path)
 
 data_sent_total = 0
 retr_sent_total = 0
+peak_throughput_mbps = 0
 
 cap = cv2.VideoCapture(int(source) if source.isdigit() else source)
 if not cap.isOpened():
@@ -102,7 +104,7 @@ print(f"Frame size: {frame_size_bytes} bytes")
 # Receiving socket
 sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock_rx.bind(("", LOCAL_RECV_PORT))
-sock_rx.settimeout(0.5)
+sock_rx.settimeout(1)
 
 sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock_tx.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8 * 1024 * 1024)
@@ -124,7 +126,7 @@ while True:
         print(f"  Failed to send pilot packet: {e}. Retrying in 0.5 second...")
         time.sleep(0.5)
         continue
-                                                
+
     try:
         while True:                
             data, _ = sock_rx.recvfrom(1024)
@@ -138,10 +140,9 @@ while True:
     except socket.timeout:
         print("  Timeout waiting for pilot ACK. Retrying pilot packet...")
         continue
-
 # -------------------------Pilot packet sent and acknowledged. Start streaming video frames----------------------------
 # ---------------------------------------------Streaming video frames--------------------------------------------------
-frame_id = 0
+frame_id = 1
 
 while True:
     ret, frame = cap.read()                             
@@ -152,7 +153,8 @@ while True:
     
 #     print(type(frame), frame.shape)
     serialized_frame = frame.tobytes()
-    print(f"Frame {frame_id} serialized size: {len(serialized_frame)} bytes")
+    
+#     print(f"Hash for frame: {frame_id} is {hashlib.sha256(serialized_frame).hexdigest()}")
     
     data_sent, retr_sent, peak_throughput = send_packet(
         sock_tx=sock_tx,
@@ -167,6 +169,9 @@ while True:
     data_sent_total += data_sent
     retr_sent_total += retr_sent
     peak_throughput_mbps = max(peak_throughput, peak_throughput_mbps)
+    
+    
+actual_data = frame_size_bytes * (frame_id - 1)
 
     # if cv2.waitKey(1) & 0xFF == ord("q"):
     #     break
@@ -198,14 +203,12 @@ while True:
 
 total_time = time.perf_counter() - start_time
 
-actual_data = frame_size_bytes * frame_id
-
-print(f"Actual data: {(actual_data)/1024/1024} Mb")
-print(f"Total data sent: {(data_sent_total+retr_sent_total)/1024/1024} Mb")
-print(f"Total retransmission sent: {retr_sent_total/1024/1024} Mb")
-print(f"Total time taken: {total_time} seconds for {frame_id} frames")
-print(f"Average throughput: {(data_sent_total+retr_sent_total) / total_time / (1024 * 1024):.2f} Mbps")
-print(f"Peak throughput: {peak_throughput_mbps:.3f} Mbps")
+print(f"Actual data: {(actual_data)/1024/1024} MB")
+print(f"Total data sent: {(data_sent_total+retr_sent_total)/1024/1024} MB")
+print(f"Total retransmission sent: {retr_sent_total/1024/1024} MB")
+print(f"Total time taken: {total_time} seconds for {frame_id - 1} frames")
+print(f"Average throughput: {(data_sent_total+retr_sent_total) / total_time / (1024 * 1024):.2f} MBps")
+print(f"Peak throughput: {peak_throughput_mbps:.3f} MBps")
 print(f"Total overhead: {(data_sent_total+retr_sent_total-actual_data)/actual_data * 100 :.4f} %")
 
 cap.release()
