@@ -7,7 +7,7 @@ Once received, each frame is then serialized into bytes and divided into packets
 
 **process_at_recv.py**
 Contains 2 functions receiver and processor. Both are implemented to run in multiprocessing fashion.
-
+	
 	**receiver**
 	
 	Receives the pilot packet to fetch the sender's timestamp and then receives each frame's packets in a loop.  Store packets corresponding to each frame IDs in a dictionary and trigger retransmission for any missing packet IDs. If all packets corresponding to the frame are received, the frame is pushed into a Queue.
