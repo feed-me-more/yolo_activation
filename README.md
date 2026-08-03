@@ -1,6 +1,7 @@
 **send_video.py**
 
 Sends the video to the receiver/server frame by frame using UDP based retransmission.
+
 Sender/client sends a pilot packet marking the start of transmission and waits for its ACK. 
 Once received, each frame is then serialized into bytes and divided into packets. Each packet is appended with a packet ID and sent to the receiver/server, where ACK is sent back if all packets are received or if the receiver times out and in each case the receiver sends the ACK containing the missing packet IDs. Sender then retransmits the missing packets if any or else moves to the next frame.
 
@@ -20,7 +21,8 @@ Contains 2 functions receiver and processor. Both are implemented to run in mult
 **streaming.sender.py**
 
 Partially runs the model on each frame and send the activations to the server/receiver. 
-Preprocess each frame: Convert BGR --> RGB --> PIL --> Normalizes float tensor in range [0, 1] 
+
+Preprocess each frame: Convert BGR --> RGB --> PIL --> Normalizes float tensor in range [0, 1] .
 Partially process the frame and form a flat single vector for the feature maps, divides into chunks and send.
 Waits for the results and if valid result received, annotate and write it into video.
 
@@ -28,6 +30,7 @@ Waits for the results and if valid result received, annotate and write it into v
 **streaming.receiver.py**
 
 Receives the activations from the client/sender and process the remaining layers at the server.
+
 Receives the frame packets, if all packets received in frame timeout time then process it normally or if all packets of a frame not received then mark it as a stale frame and reconstruct it by using the data from corpus training for vehicle detections.
 Once the frame is processed, send the detection results along with other parameters back to client/sender.
 
@@ -46,6 +49,7 @@ Same as receiver.py except the incomplete packets are replaced by zeros instead 
 **vehicle_det.py**
 
 Runs the model on the video and saves the detection results frame by frame. 
+
 Compares the detection results with the reference detection results and calculate the metrics for accuracy as defined in "compare_accuracy.py".
 
 
